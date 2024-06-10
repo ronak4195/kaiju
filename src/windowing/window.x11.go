@@ -60,6 +60,9 @@ package windowing
 */
 import "C"
 import (
+	"bytes"
+	"encoding/binary"
+	"errors"
 	"kaiju/klib"
 	"unsafe"
 
@@ -117,11 +120,20 @@ func scaleScrollDelta(delta float32) float32 {
 	return delta
 }
 
-func createWindow(windowName string, width, height, x, y int, evtSharedMem *evtMem) {
+func createWindow(w *Window, windowName string, width, height, x, y int) {
 	title := C.CString(windowName)
 	C.window_main(title, C.int(width), C.int(height),
-		C.int(x), C.int(y), evtSharedMem.AsPointer(), evtSharedMemSize)
+		C.int(x), C.int(y), w.evtSharedMem.AsPointer(), evtSharedMemSize)
 	C.free(unsafe.Pointer(title))
+	if w.evtSharedMem.IsFatal() {
+		return nil, errors.New(w.evtSharedMem.FatalMessage())
+	}
+	var hwndAddr, hInstance uint64
+	reader := bytes.NewReader(w.evtSharedMem[evtSharedMemDataStart:])
+	binary.Read(reader, binary.LittleEndian, &hwndAddr)
+	w.handle = unsafe.Pointer(uintptr(hwndAddr))
+	binary.Read(reader, binary.LittleEndian, &hInstance)
+	w.instance = unsafe.Pointer(uintptr(hInstance))
 }
 
 func (w *Window) showWindow(evtSharedMem *evtMem) {

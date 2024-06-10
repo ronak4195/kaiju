@@ -117,6 +117,10 @@ type controllerEvent struct {
 	controllerStates [4]controllerState
 }
 
+func (c *controllerEvent) clear() {
+	c.controllerStates = [4]controllerState{}
+}
+
 func (e *evtMem) AsPointer() unsafe.Pointer     { return unsafe.Pointer(&e[0]) }
 func (e *evtMem) AsDataPointer() unsafe.Pointer { return unsafe.Pointer(&e[evtSharedMemDataStart]) }
 func (e *evtMem) IsFatal() bool                 { return e[0] == sharedMemFatal }
@@ -127,12 +131,19 @@ func (e *evtMem) IsMove() bool                  { return e[0] == sharedMemWindow
 func (e *evtMem) IsActivity() bool              { return e[0] == sharedMemWindowActivity }
 func (e *evtMem) ResetHeader()                  { e[0] = 0 }
 
+func (e *evtMem) SetWriteState(value byte)  { e[0] = value }
+func (e *evtMem) SetEventType(value uint32) { e.toBaseEvent().eventType = value }
+
 func (e *evtMem) SetFatal(message string) {
 	e[0] = sharedMemFatal
 	msg := []byte(message)
 	for i := 0; i < len(msg) && i < len(e)-evtSharedMemDataStart; i++ {
 		e[i+evtSharedMemDataStart] = msg[i]
 	}
+}
+
+func (e *evtMem) toBaseEvent() *baseEvent {
+	return (*baseEvent)(unsafe.Pointer(&e[unsafe.Sizeof(uint32(0))]))
 }
 
 func (e *evtMem) toEnumEvent() *enumEvent {

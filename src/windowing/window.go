@@ -38,8 +38,6 @@
 package windowing
 
 import (
-	"bytes"
-	"encoding/binary"
 	"errors"
 	"kaiju/hid"
 	"kaiju/matrix"
@@ -75,22 +73,23 @@ const (
 )
 
 type Window struct {
-	handle        unsafe.Pointer
-	instance      unsafe.Pointer
-	Mouse         hid.Mouse
-	Keyboard      hid.Keyboard
-	Touch         hid.Touch
-	Stylus        hid.Stylus
-	Controller    hid.Controller
-	Cursor        hid.Cursor
-	Renderer      rendering.Renderer
-	evtSharedMem  *evtMem
-	x, y          int
-	width, height int
-	isClosed      bool
-	isCrashed     bool
-	OnResize      events.Event
-	OnMove        events.Event
+	handle                    unsafe.Pointer
+	instance                  unsafe.Pointer
+	Mouse                     hid.Mouse
+	Keyboard                  hid.Keyboard
+	Touch                     hid.Touch
+	Stylus                    hid.Stylus
+	Controller                hid.Controller
+	Cursor                    hid.Cursor
+	Renderer                  rendering.Renderer
+	evtSharedMem              *evtMem
+	x, y                      int
+	width, height             int
+	clientWidth, clientHeight int32
+	isClosed                  bool
+	isCrashed                 bool
+	OnResize                  events.Event
+	OnMove                    events.Event
 }
 
 type FileSearch struct {
@@ -115,16 +114,7 @@ func New(windowName string, width, height, x, y int) (*Window, error) {
 	}
 	w.Cursor = hid.NewCursor(&w.Mouse, &w.Touch, &w.Stylus)
 	// TODO:  Pass in width and height
-	createWindow(windowName+"\x00\x00", w.width, w.height, x, y, w.evtSharedMem)
-	if w.evtSharedMem.IsFatal() {
-		return nil, errors.New(w.evtSharedMem.FatalMessage())
-	}
-	var hwndAddr, hInstance uint64
-	reader := bytes.NewReader(w.evtSharedMem[evtSharedMemDataStart:])
-	binary.Read(reader, binary.LittleEndian, &hwndAddr)
-	w.handle = unsafe.Pointer(uintptr(hwndAddr))
-	binary.Read(reader, binary.LittleEndian, &hInstance)
-	w.instance = unsafe.Pointer(uintptr(hInstance))
+	createWindow(w, windowName+"\x00\x00", w.width, w.height, x, y)
 	createWindowContext(w.handle, w.evtSharedMem)
 	if w.evtSharedMem.IsFatal() {
 		return nil, errors.New(w.evtSharedMem.FatalMessage())
