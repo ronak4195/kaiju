@@ -148,7 +148,7 @@ func processFile(ttfName string) {
 		fontData.Glyphs[i].AtlasBounds.Bottom = glyph.AtlasBounds.Bottom
 	}
 	font_data.Serialize(fontData, fout)
-	//os.Remove(jsonFile)
+	os.Remove(jsonFile)
 }
 
 func main() {
