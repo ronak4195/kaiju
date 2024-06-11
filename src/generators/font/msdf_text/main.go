@@ -39,8 +39,8 @@ package main
 
 import (
 	"bufio"
-	"encoding/binary"
 	"encoding/json"
+	"kaiju/generators/font/font_data"
 	"kaiju/klib"
 	"os"
 	"os/exec"
@@ -50,26 +50,26 @@ import (
 
 const binDir = "../tools/content_tools/"
 
-type Rect struct {
+type rect struct {
 	Left   float32 `json:"left"`
 	Top    float32 `json:"top"`
 	Right  float32 `json:"right"`
 	Bottom float32 `json:"bottom"`
 }
 
-type Glyph struct {
-	Unicode     int     `json:"unicode"`
+type glyph struct {
+	Unicode     int32   `json:"unicode"`
 	Advance     float32 `json:"advance"`
-	PlaneBounds Rect    `json:"planeBounds"`
-	AtlasBounds Rect    `json:"atlasBounds"`
+	PlaneBounds rect    `json:"planeBounds"` // The bounding box of the glyph as it should be placed on the baseline
+	AtlasBounds rect    `json:"atlasBounds"` // The bounding box of the glyph in the atlas
 }
 
-type Atlas struct {
+type atlas struct {
 	Width  int32 `json:"width"`
 	Height int32 `json:"height"`
 }
 
-type Metrics struct {
+type metrics struct {
 	EmSize             float32 `json:"emSize"`
 	LineHeight         float32 `json:"lineHeight"`
 	Ascender           float32 `json:"ascender"`
@@ -78,32 +78,33 @@ type Metrics struct {
 	UnderlineThickness float32 `json:"underlineThickness"`
 }
 
-type Kerning struct {
+type kerning struct {
 	Unicode1 int32   `json:"unicode1"`
 	Unicode2 int32   `json:"unicode2"`
 	Advance  float32 `json:"advance"`
 }
 
-type FontData struct {
-	Glyphs  []Glyph   `json:"glyphs"`
-	Atlas   Atlas     `json:"atlas"`
-	Metrics Metrics   `json:"metrics"`
-	Kerning []Kerning `json:"kerning"`
+type fontData struct {
+	Glyphs  []glyph   `json:"glyphs"`
+	Atlas   atlas     `json:"atlas"`
+	Metrics metrics   `json:"metrics"`
+	Kerning []kerning `json:"kerning"`
 }
 
 func processFile(ttfName string) {
 	println("Processing", ttfName)
 	name := filepath.Base(ttfName)
 	ttfDir := filepath.Dir(ttfName)
-	ttfFile := filepath.Join(binDir, ttfName+".ttf")
+	ttfFile := filepath.Join(ttfName + ".ttf")
 	jsonFile := filepath.Join(ttfDir, "out", name+".json")
 	binFile := filepath.Join(ttfDir, "out", name+".bin")
 	pngFile := filepath.Join(ttfDir, "out", name+".png")
-	cmd := exec.Command(binDir+"msdf-atlas-gen.exe",
+
+	cmd := exec.Command(filepath.Join(binDir, "msdf-atlas-gen.exe"),
 		"-font", ttfFile,
 		"-pxrange", "4",
 		"-size", "64",
-		"-charset", filepath.Join(binDir, ttfDir, "charset.txt"),
+		"-charset", filepath.Join(ttfDir, "charset.txt"),
 		"-fontname", ttfName,
 		"-type", "msdf",
 		"-format", "png",
@@ -120,30 +121,34 @@ func processFile(ttfName string) {
 	jsonBin := klib.MustReturn(os.ReadFile(jsonFile))
 	fout := klib.MustReturn(os.Create(binFile))
 	defer fout.Close()
-	var fontData FontData
-	klib.Must(json.NewDecoder(strings.NewReader(string(jsonBin))).Decode(&fontData))
-	binary.Write(fout, binary.LittleEndian, int32(len(fontData.Glyphs)))
-	binary.Write(fout, binary.LittleEndian, fontData.Atlas.Width)
-	binary.Write(fout, binary.LittleEndian, fontData.Atlas.Height)
-	binary.Write(fout, binary.LittleEndian, fontData.Metrics.EmSize)
-	binary.Write(fout, binary.LittleEndian, fontData.Metrics.LineHeight)
-	binary.Write(fout, binary.LittleEndian, fontData.Metrics.Ascender)
-	binary.Write(fout, binary.LittleEndian, fontData.Metrics.Descender)
-	binary.Write(fout, binary.LittleEndian, fontData.Metrics.UnderlineY)
-	binary.Write(fout, binary.LittleEndian, fontData.Metrics.UnderlineThickness)
-	for _, glyph := range fontData.Glyphs {
-		binary.Write(fout, binary.LittleEndian, int32(glyph.Unicode))
-		binary.Write(fout, binary.LittleEndian, glyph.Advance)
-		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Left)
-		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Top)
-		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Right)
-		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Bottom)
-		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Left)
-		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Top)
-		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Right)
-		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Bottom)
+	var msdfData fontData
+	klib.Must(json.NewDecoder(strings.NewReader(string(jsonBin))).Decode(&msdfData))
+	fontData := font_data.FontData{
+		Width:              msdfData.Atlas.Width,
+		Height:             msdfData.Atlas.Height,
+		EmSize:             msdfData.Metrics.EmSize,
+		LineHeight:         msdfData.Metrics.LineHeight,
+		Ascender:           msdfData.Metrics.Ascender,
+		Descender:          msdfData.Metrics.Descender,
+		UnderlineY:         msdfData.Metrics.UnderlineY,
+		UnderlineThickness: msdfData.Metrics.UnderlineThickness,
+		IsMsdf:             true,
+		Glyphs:             make([]font_data.GlyphData, len(msdfData.Glyphs)),
 	}
-	os.Remove(jsonFile)
+	for i, glyph := range msdfData.Glyphs {
+		fontData.Glyphs[i].Unicode = glyph.Unicode
+		fontData.Glyphs[i].Advance = glyph.Advance
+		fontData.Glyphs[i].PlaneBounds.Left = glyph.PlaneBounds.Left
+		fontData.Glyphs[i].PlaneBounds.Top = glyph.PlaneBounds.Top
+		fontData.Glyphs[i].PlaneBounds.Right = glyph.PlaneBounds.Right
+		fontData.Glyphs[i].PlaneBounds.Bottom = glyph.PlaneBounds.Bottom
+		fontData.Glyphs[i].AtlasBounds.Left = glyph.AtlasBounds.Left
+		fontData.Glyphs[i].AtlasBounds.Top = glyph.AtlasBounds.Top
+		fontData.Glyphs[i].AtlasBounds.Right = glyph.AtlasBounds.Right
+		fontData.Glyphs[i].AtlasBounds.Bottom = glyph.AtlasBounds.Bottom
+	}
+	font_data.Serialize(fontData, fout)
+	//os.Remove(jsonFile)
 }
 
 func main() {
@@ -151,7 +156,7 @@ func main() {
 		panic("Expected the first argument to be the TTF file to convert")
 	}
 	ttfName := os.Args[1]
-	dirName := filepath.Join(binDir, ttfName)
+	dirName := filepath.Dir(ttfName)
 	if s, err := os.Stat(dirName); err != nil {
 		panic(err)
 	} else if s.IsDir() {
@@ -166,6 +171,6 @@ func main() {
 			return nil
 		}))
 	} else {
-		processFile(ttfName)
+		processFile(strings.TrimSuffix(ttfName, ".ttf"))
 	}
 }

@@ -88,7 +88,7 @@ func NewLabel(host *engine.Host, text string, anchor Anchor) *Label {
 		justify:         rendering.FontJustifyLeft,
 		colorRanges:     make([]colorRange, 0),
 		runeDrawings:    make([]rendering.Drawing, 0),
-		fontFace:        rendering.FontRegular,
+		fontFace:        rendering.FontRegularBMP,
 		wordWrap:        true,
 		renderRequired:  true,
 		lastRenderWidth: 0,
@@ -383,27 +383,27 @@ func (label *Label) SetFontWeight(weight string) {
 	switch weight {
 	case "normal":
 		if label.fontFace.IsItalic() {
-			label.fontFace = rendering.FontItalic
+			label.fontFace = rendering.FontItalicBMP
 		} else {
-			label.fontFace = rendering.FontRegular
+			label.fontFace = rendering.FontRegularBMP
 		}
 	case "bold":
 		if label.fontFace.IsItalic() {
-			label.fontFace = rendering.FontBoldItalic
+			label.fontFace = rendering.FontBoldItalicBMP
 		} else {
-			label.fontFace = rendering.FontBold
+			label.fontFace = rendering.FontBoldBMP
 		}
 	case "bolder":
 		if label.fontFace.IsItalic() {
-			label.fontFace = rendering.FontExtraBoldItalic
+			label.fontFace = rendering.FontExtraBoldItalicBMP
 		} else {
-			label.fontFace = rendering.FontExtraBold
+			label.fontFace = rendering.FontExtraBoldBMP
 		}
 	case "lighter":
 		if label.fontFace.IsItalic() {
-			label.fontFace = rendering.FontLightItalic
+			label.fontFace = rendering.FontLightItalicBMP
 		} else {
-			label.fontFace = rendering.FontLight
+			label.fontFace = rendering.FontLightBMP
 		}
 	}
 	label.SetDirty(DirtyTypeGenerated)
@@ -413,19 +413,19 @@ func (label *Label) SetFontStyle(style string) {
 	switch style {
 	case "normal":
 		if label.fontFace.IsExtraBold() {
-			label.fontFace = rendering.FontExtraBold
+			label.fontFace = rendering.FontExtraBoldBMP
 		} else if label.fontFace.IsBold() {
-			label.fontFace = rendering.FontBold
+			label.fontFace = rendering.FontBoldBMP
 		} else {
-			label.fontFace = rendering.FontRegular
+			label.fontFace = rendering.FontRegularBMP
 		}
 	case "italic":
 		if label.fontFace.IsExtraBold() {
-			label.fontFace = rendering.FontExtraBoldItalic
+			label.fontFace = rendering.FontExtraBoldItalicBMP
 		} else if label.fontFace.IsBold() {
-			label.fontFace = rendering.FontBoldItalic
+			label.fontFace = rendering.FontBoldItalicBMP
 		} else {
-			label.fontFace = rendering.FontItalic
+			label.fontFace = rendering.FontItalicBMP
 		}
 	}
 	label.SetDirty(DirtyTypeGenerated)

@@ -1,7 +1,7 @@
 {
 	"Vulkan": {
-		"Vert": "shaders/spv/text3d.vert.spv",
-		"Frag": "shaders/spv/text.frag.spv"
+		"Vert": "shaders/spv/text.vert.spv",
+		"Frag": "shaders/spv/msdf_text.frag.spv"
 	},
 	"Fields": [
 		{

@@ -1,5 +1,5 @@
 /******************************************************************************/
-/* assets_config.go                                                           */
+/* font_data.go                                                               */
 /******************************************************************************/
 /*                           This file is part of:                            */
 /*                                KAIJU ENGINE                                */
@@ -35,26 +35,61 @@
 /* OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.                              */
 /******************************************************************************/
 
-package assets
+package font_data
 
-// Textures
-const (
-	TextureSquare = "textures/square.png"
+import (
+	"encoding/binary"
+	"os"
 )
 
-// Shader definitions
-const (
-	ShaderDefinitionGrid         = "shaders/definitions/grid.json"
-	ShaderDefinitionBasic        = "shaders/definitions/basic.json"
-	ShaderDefinitionBasicSkinned = "shaders/definitions/basic_skinned.json"
-	ShaderDefinitionBasicColor   = "shaders/definitions/basic_color.json"
-	ShaderDefinitionMsdfText3D   = "shaders/definitions/msdf_text3d.json"
-	ShaderDefinitionMsdfText     = "shaders/definitions/msdf_text.json"
-	ShaderDefinitionText3D       = "shaders/definitions/text3d.json"
-	ShaderDefinitionText         = "shaders/definitions/text.json"
-	ShaderDefinitionCombine      = "shaders/definitions/combine.json"
-	ShaderDefinitionOITComposite = "shaders/definitions/oit_composite.json"
-	ShaderDefinitionUI           = "shaders/definitions/ui.json"
-	ShaderDefinitionSprite       = "shaders/definitions/sprite.json"
-	ShaderDefinitionOutline      = "shaders/definitions/outline.json"
-)
+type GlyphRect struct {
+	Left   float32
+	Top    float32
+	Right  float32
+	Bottom float32
+}
+
+type GlyphData struct {
+	Unicode     int32
+	Advance     float32
+	PlaneBounds GlyphRect // The bounding box of the glyph as it should be placed on the baseline
+	AtlasBounds GlyphRect // The bounding box of the glyph in the atlas
+}
+
+type FontData struct {
+	Width              int32
+	Height             int32
+	EmSize             float32
+	LineHeight         float32
+	Ascender           float32
+	Descender          float32
+	UnderlineY         float32
+	UnderlineThickness float32
+	IsMsdf             bool
+	Glyphs             []GlyphData
+}
+
+func Serialize(fontData FontData, fout *os.File) {
+	binary.Write(fout, binary.LittleEndian, int32(len(fontData.Glyphs)))
+	binary.Write(fout, binary.LittleEndian, fontData.Width)
+	binary.Write(fout, binary.LittleEndian, fontData.Height)
+	binary.Write(fout, binary.LittleEndian, fontData.EmSize)
+	binary.Write(fout, binary.LittleEndian, fontData.LineHeight)
+	binary.Write(fout, binary.LittleEndian, fontData.Ascender)
+	binary.Write(fout, binary.LittleEndian, fontData.Descender)
+	binary.Write(fout, binary.LittleEndian, fontData.UnderlineY)
+	binary.Write(fout, binary.LittleEndian, fontData.UnderlineThickness)
+	for _, glyph := range fontData.Glyphs {
+		binary.Write(fout, binary.LittleEndian, int32(glyph.Unicode))
+		binary.Write(fout, binary.LittleEndian, glyph.Advance)
+		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Left)
+		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Top)
+		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Right)
+		binary.Write(fout, binary.LittleEndian, glyph.PlaneBounds.Bottom)
+		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Left)
+		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Top)
+		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Right)
+		binary.Write(fout, binary.LittleEndian, glyph.AtlasBounds.Bottom)
+	}
+	binary.Write(fout, binary.LittleEndian, fontData.IsMsdf)
+}

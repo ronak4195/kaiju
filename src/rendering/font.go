@@ -89,42 +89,26 @@ func (f FontFace) IsItalic() bool {
 func (f FontFace) string() string { return string(f) }
 
 const (
-	FontCondensedBold                = FontFace("fonts/OpenSans_Condensed-Bold")
-	FontCondensedBoldItalic          = FontFace("fonts/OpenSans_Condensed-BoldItalic")
-	FontCondensedExtraBold           = FontFace("fonts/OpenSans_Condensed-ExtraBold")
-	FontCondensedExtraBoldItalic     = FontFace("fonts/OpenSans_Condensed-ExtraBoldItalic")
-	FontCondensedItalic              = FontFace("fonts/OpenSans_Condensed-Italic")
-	FontCondensedLight               = FontFace("fonts/OpenSans_Condensed-Light")
-	FontCondensedLightItalic         = FontFace("fonts/OpenSans_Condensed-LightItalic")
-	FontCondensedMedium              = FontFace("fonts/OpenSans_Condensed-Medium")
-	FontCondensedMediumItalic        = FontFace("fonts/OpenSans_Condensed-MediumItalic")
-	FontCondensedRegular             = FontFace("fonts/OpenSans_Condensed-Regular")
-	FontCondensedSemiBold            = FontFace("fonts/OpenSans_Condensed-SemiBold")
-	FontCondensedSemiBoldItalic      = FontFace("fonts/OpenSans_Condensed-SemiBoldItalic")
-	FontSemiCondensedBold            = FontFace("fonts/OpenSans_SemiCondensed-Bold")
-	FontSemiCondensedBoldItalic      = FontFace("fonts/OpenSans_SemiCondensed-BoldItalic")
-	FontSemiCondensedExtraBold       = FontFace("fonts/OpenSans_SemiCondensed-ExtraBold")
-	FontSemiCondensedExtraBoldItalic = FontFace("fonts/OpenSans_SemiCondensed-ExtraBoldItalic")
-	FontSemiCondensedItalic          = FontFace("fonts/OpenSans_SemiCondensed-Italic")
-	FontSemiCondensedLight           = FontFace("fonts/OpenSans_SemiCondensed-Light")
-	FontSemiCondensedLightItalic     = FontFace("fonts/OpenSans_SemiCondensed-LightItalic")
-	FontSemiCondensedMedium          = FontFace("fonts/OpenSans_SemiCondensed-Medium")
-	FontSemiCondensedMediumItalic    = FontFace("fonts/OpenSans_SemiCondensed-MediumItalic")
-	FontSemiCondensedRegular         = FontFace("fonts/OpenSans_SemiCondensed-Regular")
-	FontSemiCondensedSemiBold        = FontFace("fonts/OpenSans_SemiCondensed-SemiBold")
-	FontSemiCondensedSemiBoldItalic  = FontFace("fonts/OpenSans_SemiCondensed-SemiBoldItalic")
-	FontBold                         = FontFace("fonts/OpenSans-Bold")
-	FontBoldItalic                   = FontFace("fonts/OpenSans-BoldItalic")
-	FontExtraBold                    = FontFace("fonts/OpenSans-ExtraBold")
-	FontExtraBoldItalic              = FontFace("fonts/OpenSans-ExtraBoldItalic")
-	FontItalic                       = FontFace("fonts/OpenSans-Italic")
-	FontLight                        = FontFace("fonts/OpenSans-Light")
-	FontLightItalic                  = FontFace("fonts/OpenSans-LightItalic")
-	FontMedium                       = FontFace("fonts/OpenSans-Medium")
-	FontMediumItalic                 = FontFace("fonts/OpenSans-MediumItalic")
-	FontRegular                      = FontFace("fonts/OpenSans-Regular")
-	FontSemiBold                     = FontFace("fonts/OpenSans-SemiBold")
-	FontSemiBoldItalic               = FontFace("fonts/OpenSans-SemiBoldItalic")
+	FontBold               = FontFace("fonts/OpenSans-Bold")
+	FontBoldBMP            = FontFace("fonts/OpenSans-Bold-bmp")
+	FontBoldItalic         = FontFace("fonts/OpenSans-BoldItalic")
+	FontBoldItalicBMP      = FontFace("fonts/OpenSans-BoldItalic-bmp")
+	FontExtraBold          = FontFace("fonts/OpenSans-ExtraBold")
+	FontExtraBoldBMP       = FontFace("fonts/OpenSans-ExtraBold-bmp")
+	FontExtraBoldItalic    = FontFace("fonts/OpenSans-ExtraBoldItalic")
+	FontExtraBoldItalicBMP = FontFace("fonts/OpenSans-ExtraBoldItalic-bmp")
+	FontItalic             = FontFace("fonts/OpenSans-Italic")
+	FontItalicBMP          = FontFace("fonts/OpenSans-Italic-bmp")
+	FontLight              = FontFace("fonts/OpenSans-Light")
+	FontLightBMP           = FontFace("fonts/OpenSans-Light-bmp")
+	FontLightItalic        = FontFace("fonts/OpenSans-LightItalic")
+	FontLightItalicBMP     = FontFace("fonts/OpenSans-LightItalic-bmp")
+	FontRegular            = FontFace("fonts/OpenSans-Regular")
+	FontRegularBMP         = FontFace("fonts/OpenSans-Regular-bmp")
+	FontSemiBold           = FontFace("fonts/OpenSans-SemiBold")
+	FontSemiBoldBMP        = FontFace("fonts/OpenSans-SemiBold-bmp")
+	FontSemiBoldItalic     = FontFace("fonts/OpenSans-SemiBoldItalic")
+	FontSemiBoldItalicBMP  = FontFace("fonts/OpenSans-SemiBoldItalic-bmp")
 
 	DefaultFontEMSize = 14.0
 )
@@ -145,6 +129,7 @@ type fontBin struct {
 	metrics                           fontBinMetrics
 	letters                           map[rune]fontBinChar
 	cachedLetters, cachedOrthoLetters map[rune]*cachedLetterMesh
+	isMsdf                            bool
 }
 
 type cachedLetterMesh struct {
@@ -157,6 +142,7 @@ type cachedLetterMesh struct {
 }
 
 type FontCache struct {
+	msdfShader, msdfOrthoShader *Shader
 	textShader, textOrthoShader *Shader
 	renderer                    Renderer
 	renderCaches                RenderCaches
@@ -282,8 +268,8 @@ func (cache FontCache) cachedMeshLetter(font fontBin, letter rune, isOrtho bool)
 }
 
 func (cache *FontCache) createLetterMesh(font fontBin, key rune, c fontBinChar, renderer Renderer, meshCache *MeshCache) {
-	shader := cache.textShader
-	oShader := cache.textOrthoShader
+	shader := cache.msdfShader
+	oShader := cache.msdfOrthoShader
 
 	w := c.Width()
 	h := -c.Height()
@@ -352,6 +338,7 @@ func (cache *FontCache) initFont(face FontFace, renderer Renderer, assetDb *asse
 		binary.Read(read, binary.LittleEndian, &fbc.atlasBounds)
 		bin.letters[fbc.letter] = fbc
 	}
+	binary.Read(read, binary.LittleEndian, &bin.isMsdf)
 	sample := findBinChar(bin, 'j')
 	cSpace := fontBinChar{
 		letter:      ' ',
@@ -377,18 +364,22 @@ func (cache *FontCache) initFont(face FontFace, renderer Renderer, assetDb *asse
 	cReturn := fontBinChar{letter: '\r', advance: 0.0,
 		planeBounds: [4]float32{0, 0, 0, 0}, atlasBounds: [4]float32{0.999, 0.001, 1.0, 0.0}}
 	bin.letters['\r'] = cReturn
-	for i := int32(0); i < count; i++ {
-		cache.createLetterMesh(bin, bin.letters[i].letter, bin.letters[i], renderer, cache.renderCaches.MeshCache())
+	for k := range bin.letters {
+		cache.createLetterMesh(bin, bin.letters[k].letter, bin.letters[k], renderer, cache.renderCaches.MeshCache())
 	}
 	cache.fontFaces[face.string()] = bin
 	return true
 }
 
 func (cache *FontCache) Init(renderer Renderer, assetDb *assets.Database, caches RenderCaches) {
+	cache.msdfShader = caches.ShaderCache().ShaderFromDefinition(
+		assets.ShaderDefinitionMsdfText3D)
+	cache.msdfOrthoShader = caches.ShaderCache().ShaderFromDefinition(
+		assets.ShaderDefinitionMsdfText)
 	cache.textShader = caches.ShaderCache().ShaderFromDefinition(
-		assets.ShaderDefinitionText3D)
+		assets.ShaderDefinitionMsdfText3D)
 	cache.textOrthoShader = caches.ShaderCache().ShaderFromDefinition(
-		assets.ShaderDefinitionText)
+		assets.ShaderDefinitionMsdfText)
 	cache.renderCaches = caches
 }
 
@@ -412,9 +403,9 @@ func (cache *FontCache) RenderMeshes(caches RenderCaches,
 	fontFace := cache.fontFaces[face.string()]
 	var shader *Shader
 	if is3D {
-		shader = cache.textShader
+		shader = cache.msdfShader
 	} else {
-		shader = cache.textOrthoShader
+		shader = cache.msdfOrthoShader
 	}
 
 	// Iterate through all characters
