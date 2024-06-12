@@ -40,7 +40,6 @@ package main
 import (
 	"encoding/json"
 	"encoding/xml"
-	"fmt"
 	"kaiju/generators/font/font_data"
 	"kaiju/klib"
 	"os"
@@ -120,17 +119,14 @@ func processFile(fontFile string) {
 	for i, c := range data.CharData.Chars {
 		fontData.Glyphs[i].Unicode = c.Id
 		fontData.Glyphs[i].PlaneBounds.Left = 0
-		fontData.Glyphs[i].PlaneBounds.Top = 1
+		fontData.Glyphs[i].PlaneBounds.Top = 0
 		fontData.Glyphs[i].PlaneBounds.Right = 1
-		fontData.Glyphs[i].PlaneBounds.Bottom = 0
+		fontData.Glyphs[i].PlaneBounds.Bottom = 1
 		fontData.Glyphs[i].AtlasBounds.Left = float32(c.X)
-		fontData.Glyphs[i].AtlasBounds.Top = float32(c.Y) + float32(c.Height)
+		fontData.Glyphs[i].AtlasBounds.Top = float32(c.Y)
 		fontData.Glyphs[i].AtlasBounds.Right = float32(c.X) + float32(c.Width)
-		fontData.Glyphs[i].AtlasBounds.Bottom = float32(c.Y)
+		fontData.Glyphs[i].AtlasBounds.Bottom = float32(c.Y) + float32(c.Height)
 		fontData.Glyphs[i].Advance = float32(c.XAdvance)
-		if strings.Contains(fontFile, "Regular") {
-			fmt.Println(rune(fontData.Glyphs[i].Unicode), fontData.Glyphs[i].AtlasBounds.Left, fontData.Glyphs[i].AtlasBounds.Top, fontData.Glyphs[i].AtlasBounds.Right, fontData.Glyphs[i].AtlasBounds.Bottom)
-		}
 	}
 	jsonMap := strings.TrimSuffix(strings.TrimSuffix(binFile, ".bin"), "-bmp") + ".json"
 	if _, err := os.Stat(jsonMap); err == nil {
@@ -145,9 +141,13 @@ func processFile(fontFile string) {
 		}
 		for i := range fontData.Glyphs {
 			target := msdfData.Glyphs[tmpMap[fontData.Glyphs[i].Unicode]]
-			fontData.Glyphs[i].PlaneBounds = font_data.GlyphRect(target.PlaneBounds)
+			pb := font_data.GlyphRect(target.PlaneBounds)
+			// Top and bottom are inverted for some reason
+			pb.Top, pb.Bottom = pb.Bottom, pb.Top
+			fontData.Glyphs[i].PlaneBounds = pb
 			fontData.Glyphs[i].Advance = target.Advance
 		}
+		os.Remove(jsonMap)
 	}
 	fout := klib.MustReturn(os.Create(binFile))
 	defer fout.Close()

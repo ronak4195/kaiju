@@ -97,14 +97,15 @@ func processFile(ttfName string) {
 	for i, glyph := range msdfData.Glyphs {
 		fontData.Glyphs[i].Unicode = glyph.Unicode
 		fontData.Glyphs[i].Advance = glyph.Advance
+		// Top and bottom are inverted for some reason
 		fontData.Glyphs[i].PlaneBounds.Left = glyph.PlaneBounds.Left
-		fontData.Glyphs[i].PlaneBounds.Top = glyph.PlaneBounds.Top
+		fontData.Glyphs[i].PlaneBounds.Bottom = glyph.PlaneBounds.Top
 		fontData.Glyphs[i].PlaneBounds.Right = glyph.PlaneBounds.Right
-		fontData.Glyphs[i].PlaneBounds.Bottom = glyph.PlaneBounds.Bottom
+		fontData.Glyphs[i].PlaneBounds.Top = glyph.PlaneBounds.Bottom
 		fontData.Glyphs[i].AtlasBounds.Left = glyph.AtlasBounds.Left
-		fontData.Glyphs[i].AtlasBounds.Top = glyph.AtlasBounds.Top
+		fontData.Glyphs[i].AtlasBounds.Bottom = glyph.AtlasBounds.Top
 		fontData.Glyphs[i].AtlasBounds.Right = glyph.AtlasBounds.Right
-		fontData.Glyphs[i].AtlasBounds.Bottom = glyph.AtlasBounds.Bottom
+		fontData.Glyphs[i].AtlasBounds.Top = glyph.AtlasBounds.Bottom
 	}
 	font_data.Serialize(fontData, fout)
 	//os.Remove(jsonFile)

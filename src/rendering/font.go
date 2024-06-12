@@ -276,7 +276,7 @@ func (cache *FontCache) createLetterMesh(font fontBin, key rune, c fontBinChar, 
 	}
 
 	w := c.Width()
-	h := -c.Height()
+	h := c.Height()
 
 	mesh := NewMeshScreenQuad(meshCache)
 	transformation := matrix.Mat4Identity()
@@ -288,12 +288,19 @@ func (cache *FontCache) createLetterMesh(font fontBin, key rune, c fontBinChar, 
 	clm.texture = font.texture
 	clm.transformation = transformation
 	uvx := c.atlasBounds[0]
-	uvy := c.atlasBounds[3]
+	uvy := c.atlasBounds[1]
+	if !font.isMsdf {
+		// TODO:  Figure out why this is later, it's probably due to tooling
+		uvy = 1 - c.atlasBounds[3]
+	}
 	uvw := c.atlasBounds[2] - c.atlasBounds[0]
-	uvh := c.atlasBounds[1] - c.atlasBounds[3]
+	uvh := c.atlasBounds[3] - c.atlasBounds[1]
 	clm.uvs = matrix.Vec4{
 		uvx / float32(font.width), uvy / float32(font.height),
 		uvw / float32(font.width), uvh / float32(font.height)}
+
+	//clm.uvs = matrix.Vec4{0.7080078125, 1 - 0.634765625, 0.03515625, 0.0498046875}
+
 	// TODO:  Figure out the distance field size
 	clm.pxRange = matrix.Vec2{
 		c.Width() / distanceFieldSize * distanceFieldRange,
@@ -342,11 +349,6 @@ func (cache *FontCache) initFont(face FontFace, renderer Renderer, assetDb *asse
 	}
 	binary.Read(read, binary.LittleEndian, &bin.isMsdf)
 	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterLinear)
-	//if bin.isMsdf {
-	//	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterNearest)
-	//} else {
-	//	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterLinear)
-	//}
 	if bin.texture == nil {
 		return false
 	}
@@ -500,7 +502,7 @@ func (cache *FontCache) RenderMeshes(caches RenderCaches,
 				// TODO:  Figure out the distance field size
 				pxRange := matrix.Vec2{
 					(ch.Width() * scale) / distanceFieldSize * distanceFieldRange,
-					(-ch.Height() * scale) / distanceFieldSize * distanceFieldRange}
+					(ch.Height() * scale) / distanceFieldSize * distanceFieldRange}
 				//pxRange := matrix.Vec2{
 				//	(ch.Width() * scale) / ch.AtlasWidth() * distanceFieldRange,
 				//	(ch.Height() * scale) / ch.AtlasHeight() * distanceFieldRange}
@@ -542,7 +544,7 @@ func (cache *FontCache) RenderMeshes(caches RenderCaches,
 					// TODO:  Scale and place the mesh based on justify, baseline, etc.
 					model.MultiplyAssign(clm.transformation)
 					model.Scale(matrix.Vec3{scale * inverseWidth, scale * inverseHeight, 1.0})
-					model.Translate(matrix.Vec3{xpos, (ypos + h), z})
+					model.Translate(matrix.Vec3{xpos, ypos, z})
 					uvs = clm.uvs
 					m = clm.mesh
 				}
