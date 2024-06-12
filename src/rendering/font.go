@@ -270,6 +270,10 @@ func (cache FontCache) cachedMeshLetter(font fontBin, letter rune, isOrtho bool)
 func (cache *FontCache) createLetterMesh(font fontBin, key rune, c fontBinChar, renderer Renderer, meshCache *MeshCache) {
 	shader := cache.msdfShader
 	oShader := cache.msdfOrthoShader
+	if !font.isMsdf {
+		shader = cache.textShader
+		oShader = cache.textOrthoShader
+	}
 
 	w := c.Width()
 	h := -c.Height()
@@ -310,12 +314,10 @@ func (cache *FontCache) createLetterMesh(font fontBin, key rune, c fontBinChar, 
 
 func (cache *FontCache) initFont(face FontFace, renderer Renderer, assetDb *assets.Database) bool {
 	bin := fontBin{}
-	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterLinear)
-	bin.texture.MipLevels = 1
 	bin.cachedLetters = make(map[rune]*cachedLetterMesh)
 	bin.cachedOrthoLetters = make(map[rune]*cachedLetterMesh)
 	out, _ := assetDb.Read(face.string() + ".bin")
-	if bin.texture == nil || out == nil || len(out) == 0 {
+	if out == nil || len(out) == 0 {
 		return false
 	}
 	read := bytes.NewReader(out)
@@ -339,6 +341,16 @@ func (cache *FontCache) initFont(face FontFace, renderer Renderer, assetDb *asse
 		bin.letters[fbc.letter] = fbc
 	}
 	binary.Read(read, binary.LittleEndian, &bin.isMsdf)
+	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterLinear)
+	//if bin.isMsdf {
+	//	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterNearest)
+	//} else {
+	//	bin.texture, _ = cache.renderCaches.TextureCache().Texture(face.string()+".png", TextureFilterLinear)
+	//}
+	if bin.texture == nil {
+		return false
+	}
+	bin.texture.MipLevels = 1
 	sample := findBinChar(bin, 'j')
 	cSpace := fontBinChar{
 		letter:      ' ',
@@ -377,9 +389,9 @@ func (cache *FontCache) Init(renderer Renderer, assetDb *assets.Database, caches
 	cache.msdfOrthoShader = caches.ShaderCache().ShaderFromDefinition(
 		assets.ShaderDefinitionMsdfText)
 	cache.textShader = caches.ShaderCache().ShaderFromDefinition(
-		assets.ShaderDefinitionMsdfText3D)
+		assets.ShaderDefinitionText3D)
 	cache.textOrthoShader = caches.ShaderCache().ShaderFromDefinition(
-		assets.ShaderDefinitionMsdfText)
+		assets.ShaderDefinitionText)
 	cache.renderCaches = caches
 }
 
@@ -402,10 +414,18 @@ func (cache *FontCache) RenderMeshes(caches RenderCaches,
 
 	fontFace := cache.fontFaces[face.string()]
 	var shader *Shader
-	if is3D {
-		shader = cache.msdfShader
+	if fontFace.isMsdf {
+		if is3D {
+			shader = cache.msdfShader
+		} else {
+			shader = cache.msdfOrthoShader
+		}
 	} else {
-		shader = cache.msdfOrthoShader
+		if is3D {
+			shader = cache.textShader
+		} else {
+			shader = cache.textOrthoShader
+		}
 	}
 
 	// Iterate through all characters

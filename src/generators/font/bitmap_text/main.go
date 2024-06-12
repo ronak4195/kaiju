@@ -38,7 +38,9 @@
 package main
 
 import (
+	"encoding/json"
 	"encoding/xml"
+	"fmt"
 	"kaiju/generators/font/font_data"
 	"kaiju/klib"
 	"os"
@@ -101,11 +103,13 @@ func processFile(fontFile string) {
 	if err := xml.Unmarshal(text, &data); err != nil {
 		panic(err)
 	}
+	font := strings.TrimSuffix(fontFile, ".xml")
+	binFile := filepath.Join(filepath.Dir(font), "out", filepath.Base(font)+".bin")
 	fontData := font_data.FontData{
 		Width:              data.Common.ScaleW,
 		Height:             data.Common.ScaleH,
-		EmSize:             float32(data.Info.Size),
-		LineHeight:         float32(data.Common.LineHeight),
+		EmSize:             1, //float32(data.Info.Size),
+		LineHeight:         float32(data.Info.Size) / float32(data.Common.LineHeight),
 		Ascender:           0,
 		Descender:          0,
 		UnderlineY:         0,
@@ -124,9 +128,27 @@ func processFile(fontFile string) {
 		fontData.Glyphs[i].AtlasBounds.Right = float32(c.X) + float32(c.Width)
 		fontData.Glyphs[i].AtlasBounds.Bottom = float32(c.Y)
 		fontData.Glyphs[i].Advance = float32(c.XAdvance)
+		if strings.Contains(fontFile, "Regular") {
+			fmt.Println(rune(fontData.Glyphs[i].Unicode), fontData.Glyphs[i].AtlasBounds.Left, fontData.Glyphs[i].AtlasBounds.Top, fontData.Glyphs[i].AtlasBounds.Right, fontData.Glyphs[i].AtlasBounds.Bottom)
+		}
 	}
-	font := strings.TrimSuffix(fontFile, ".xml")
-	binFile := filepath.Join(filepath.Dir(font), "out", filepath.Base(font)+".bin")
+	jsonMap := strings.TrimSuffix(strings.TrimSuffix(binFile, ".bin"), "-bmp") + ".json"
+	if _, err := os.Stat(jsonMap); err == nil {
+		var msdfData font_data.MsdfData
+		jsonBin := klib.MustReturn(os.ReadFile(jsonMap))
+		klib.Must(json.Unmarshal(jsonBin, &msdfData))
+		tmpMap := map[int32]int{}
+		fontData.LineHeight = msdfData.Metrics.LineHeight
+		fontData.EmSize = msdfData.Metrics.EmSize
+		for i := range msdfData.Glyphs {
+			tmpMap[msdfData.Glyphs[i].Unicode] = i
+		}
+		for i := range fontData.Glyphs {
+			target := msdfData.Glyphs[tmpMap[fontData.Glyphs[i].Unicode]]
+			fontData.Glyphs[i].PlaneBounds = font_data.GlyphRect(target.PlaneBounds)
+			fontData.Glyphs[i].Advance = target.Advance
+		}
+	}
 	fout := klib.MustReturn(os.Create(binFile))
 	defer fout.Close()
 	font_data.Serialize(fontData, fout)
