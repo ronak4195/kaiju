@@ -41,6 +41,7 @@ import (
 	"kaiju/assets"
 	"kaiju/matrix"
 	"log/slog"
+	"strings"
 	"unsafe"
 
 	vk "kaiju/rendering/vulkan"
@@ -104,13 +105,28 @@ func (vr *Vulkan) writeDrawingDescriptors(key *Shader, groups []DrawInstanceGrou
 				t := group.Textures[j]
 				group.imageInfos[j] = imageInfo(t.RenderId.View, t.RenderId.Sampler)
 			}
-			const maxDescriptorWrites = 4
-			descriptorWrites := [maxDescriptorWrites]vk.WriteDescriptorSet{
-				prepareSetWriteBuffer(set, []vk.DescriptorBufferInfo{globalInfo},
-					0, vk.DescriptorTypeUniformBuffer),
-				prepareSetWriteImage(set, group.imageInfos, 1, false),
+			const maxDescriptorWrites = 5
+			// TODO:  This is temp, should be better handled
+			var count int
+			var descriptorWrites [maxDescriptorWrites]vk.WriteDescriptorSet
+			if strings.HasSuffix(key.definition.RenderPass, "lighting") {
+				descriptorWrites = [maxDescriptorWrites]vk.WriteDescriptorSet{
+					prepareSetWriteBuffer(set, []vk.DescriptorBufferInfo{globalInfo},
+						0, vk.DescriptorTypeUniformBuffer),
+					prepareSetWriteImage(set, []vk.DescriptorImageInfo{group.imageInfos[0]}, 1, vk.DescriptorTypeCombinedImageSampler),
+					prepareSetWriteImage(set, []vk.DescriptorImageInfo{group.imageInfos[1]}, 1, vk.DescriptorTypeCombinedImageSampler),
+					prepareSetWriteImage(set, []vk.DescriptorImageInfo{group.imageInfos[2]}, 1, vk.DescriptorTypeCombinedImageSampler),
+					prepareSetWriteImage(set, []vk.DescriptorImageInfo{group.imageInfos[3]}, 1, vk.DescriptorTypeInputAttachment),
+				}
+				count = 5
+			} else {
+				descriptorWrites = [maxDescriptorWrites]vk.WriteDescriptorSet{
+					prepareSetWriteBuffer(set, []vk.DescriptorBufferInfo{globalInfo},
+						0, vk.DescriptorTypeUniformBuffer),
+					prepareSetWriteImage(set, group.imageInfos, 1, vk.DescriptorTypeCombinedImageSampler),
+				}
+				count = 2
 			}
-			count := 2
 			for k := range group.namedBuffers {
 				if count >= maxDescriptorWrites {
 					slog.Error("need to increase max descriptor writes array size")
@@ -295,7 +311,8 @@ func (vr *Vulkan) prepCombinedTargets(targets ...RenderTargetDraw) {
 
 func (vr *Vulkan) combineTargets(targets ...RenderTargetDraw) Canvas {
 	if len(targets) == 1 {
-		return targets[0].Target.(*OITCanvas)
+		return targets[0].Target.(*GBufferCanvas)
+		//return targets[0].Target.(*OITCanvas)
 	}
 	frame := vr.currentFrame
 	cmdBuffIdx := frame * MaxCommandBuffers

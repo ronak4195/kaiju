@@ -117,8 +117,8 @@ func (r *OITCanvas) Draw(renderer Renderer, drawings []ShaderDraw) {
 	}
 	set := r.descriptorSets[vr.currentFrame]
 	descriptorWrites := []vk.WriteDescriptorSet{
-		prepareSetWriteImage(set, imageInfos[0:1], 0, true),
-		prepareSetWriteImage(set, imageInfos[1:2], 1, true),
+		prepareSetWriteImage(set, imageInfos[0:1], 0, vk.DescriptorTypeInputAttachment),
+		prepareSetWriteImage(set, imageInfos[1:2], 1, vk.DescriptorTypeInputAttachment),
 	}
 	vk.UpdateDescriptorSets(vr.device, uint32(len(descriptorWrites)), &descriptorWrites[0], 0, nil)
 	ds := [...]vk.DescriptorSet{r.descriptorSets[vr.currentFrame]}

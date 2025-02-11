@@ -1,0 +1,17 @@
+{
+	"Canvas": "gbuffer",
+	"Vulkan": {
+		"Vert": "shaders/spv/gbuffer.vert.spv",
+		"Frag": "shaders/spv/gbuffer.frag.spv"
+	},
+	"Fields": [{
+		"Name": "model",
+		"Type": "mat4"
+	}],
+	"Layouts": [{
+		"Type": "UniformBuffer",
+		"Flags": ["Vertex", "Fragment"],
+		"Count": 1,
+		"Binding": 0
+	}]
+}

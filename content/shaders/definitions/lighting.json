@@ -1,0 +1,39 @@
+{
+	"Canvas": "gbuffer",
+	"RenderPass": "lighting",
+	"Pipeline": "lighting",
+	"Vulkan": {
+		"Vert": "shaders/spv/lighting.vert.spv",
+		"Frag": "shaders/spv/lighting.frag.spv"
+	},
+	"Fields": [{
+		"Name": "dummy",
+		"Type": "vec4"
+	}],
+	"Layouts": [{
+		"Type": "UniformBuffer",
+		"Flags": ["Fragment"],
+		"Count": 1,
+		"Binding": 0
+	}, {
+		"Type": "CombinedImageSampler",
+		"Flags": ["Fragment"],
+		"Count": 1,
+		"Binding": 1
+	}, {
+		"Type": "CombinedImageSampler",
+		"Flags": ["Fragment"],
+		"Count": 1,
+		"Binding": 2
+	}, {
+		"Type": "CombinedImageSampler",
+		"Flags": ["Fragment"],
+		"Count": 1,
+		"Binding": 3
+	}, {
+		"Type": "InputAttachment",
+		"Flags": ["Fragment"],
+		"Count": 1,
+		"Binding": 4
+	}]
+}

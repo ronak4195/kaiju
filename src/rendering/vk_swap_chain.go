@@ -161,6 +161,7 @@ func (vr *Vulkan) createSwapChain() bool {
 	} else {
 		vr.dbg.add(vk.TypeToUintPtr(swapChain))
 		vr.swapChain = swapChain
+		vr.swapChainFormat = info.ImageFormat
 		vk.GetSwapchainImages(vr.device, vr.swapChain, &vr.swapImageCount, nil)
 		vr.swapImages = make([]TextureId, vr.swapImageCount)
 		swapImageList := make([]vk.Image, vr.swapImageCount)

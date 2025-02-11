@@ -95,17 +95,13 @@ func imageInfo(view vk.ImageView, sampler vk.Sampler) vk.DescriptorImageInfo {
 	return imageInfo
 }
 
-func prepareSetWriteImage(set vk.DescriptorSet, imageInfos []vk.DescriptorImageInfo, bindingIndex uint32, asAttachment bool) vk.WriteDescriptorSet {
+func prepareSetWriteImage(set vk.DescriptorSet, imageInfos []vk.DescriptorImageInfo, bindingIndex uint32, descriptorType vk.DescriptorType) vk.WriteDescriptorSet {
 	write := vk.WriteDescriptorSet{}
 	write.SType = vk.StructureTypeWriteDescriptorSet
 	write.DstSet = set
 	write.DstBinding = bindingIndex
 	write.DstArrayElement = 0
-	if asAttachment {
-		write.DescriptorType = vk.DescriptorTypeInputAttachment
-	} else {
-		write.DescriptorType = vk.DescriptorTypeCombinedImageSampler
-	}
+	write.DescriptorType = descriptorType
 	write.DescriptorCount = uint32(len(imageInfos))
 	write.PImageInfo = &imageInfos[0]
 	return write

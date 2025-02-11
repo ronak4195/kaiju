@@ -37,8 +37,38 @@
 
 package source
 
-import "kaiju/engine"
+import (
+	"kaiju/assets"
+	"kaiju/engine"
+	"kaiju/rendering"
+	"kaiju/rendering/loaders"
+	"log/slog"
+)
 
 func Main(host *engine.Host) {
-
+	const cubeGLB = "editor/meshes/cube.glb"
+	res, err := loaders.GLTF(cubeGLB, host.AssetDatabase(), host.WorkGroup())
+	if err != nil {
+		slog.Error("failed to load the cube mesh", "error", err.Error())
+		return
+	} else if !res.IsValid() || len(res.Meshes) != 1 {
+		slog.Error("cube mesh data corrupted")
+		return
+	}
+	resMesh := res.Meshes[0]
+	mesh := rendering.NewMesh(resMesh.MeshName, resMesh.Verts, resMesh.Indexes)
+	host.MeshCache().AddMesh(mesh)
+	e := host.NewEntity()
+	sd := rendering.NewShaderDataBase()
+	//tex, _ := host.TextureCache().Texture(assets.TextureSquare, rendering.TextureFilterLinear)
+	drawing := rendering.Drawing{
+		Renderer:   host.Window.Renderer,
+		Shader:     host.ShaderCache().ShaderFromDefinition(assets.ShaderDefinitionGBuffer),
+		Mesh:       mesh,
+		Textures:   []*rendering.Texture{}, //[]*rendering.Texture{tex},
+		ShaderData: &sd,
+		Transform:  &e.Transform,
+		CanvasId:   "gbuffer",
+	}
+	host.Drawings.AddDrawing(&drawing)
 }

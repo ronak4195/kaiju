@@ -78,6 +78,7 @@ type Vulkan struct {
 	swapChain                  vk.Swapchain
 	swapChainExtent            vk.Extent2D
 	swapChainRenderPass        RenderPass
+	swapChainFormat            vk.Format
 	imageIndex                 [maxFramesInFlight]uint32
 	descriptorPools            []vk.DescriptorPool
 	globalUniformBuffers       [maxFramesInFlight]vk.Buffer
@@ -100,6 +101,7 @@ type Vulkan struct {
 	msaaSamples                vk.SampleCountFlagBits
 	defaultCanvas              OITCanvas
 	outlineCanvas              OutlineCanvas
+	gbufferCanvas              GBufferCanvas
 	combineCanvas              CombineCanvas
 	combinedDrawings           Drawings
 	preRuns                    []func()
@@ -302,6 +304,9 @@ func NewVKRenderer(window RenderingContainer, applicationName string) (*Vulkan, 
 	if err := vr.outlineCanvas.Create(vr); err != nil {
 		return nil, err
 	}
+	if err := vr.gbufferCanvas.Create(vr); err != nil {
+		return nil, err
+	}
 	if err := vr.combineCanvas.Create(vr); err != nil {
 		return nil, err
 	}
@@ -323,6 +328,8 @@ func (vr *Vulkan) Initialize(caches RenderCaches, width, height int32) error {
 	vr.RegisterCanvas("default", &vr.defaultCanvas)
 	vr.RegisterCanvas("outline", &vr.outlineCanvas)
 	vr.RegisterCanvas("combine", &vr.combineCanvas)
+	vr.RegisterCanvas("gbuffer", &vr.gbufferCanvas)
+	vr.gbufferCanvas.Initialize(vr)
 	return nil
 }
 

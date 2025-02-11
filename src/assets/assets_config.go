@@ -55,4 +55,6 @@ const (
 	ShaderDefinitionUI           = "shaders/definitions/ui.json"
 	ShaderDefinitionSprite       = "shaders/definitions/sprite.json"
 	ShaderDefinitionOutline      = "shaders/definitions/outline.json"
+	ShaderDefinitionGBuffer      = "shaders/definitions/gbuffer.json"
+	ShaderDefinitionLighting     = "shaders/definitions/lighting.json"
 )
