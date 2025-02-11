@@ -1,0 +1,213 @@
+{
+	"CullMode": "",
+	"DrawMode": "",
+	"FragLayouts": [
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 0,
+			"Name": "fragColor",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 1,
+			"Name": "fragTexCoords",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec2"
+		},
+		{
+			"Binding": 1,
+			"Fields": null,
+			"Location": -1,
+			"Name": "texSampler",
+			"Set": -1,
+			"Source": "uniform",
+			"Type": "sampler2D"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 0,
+			"Name": "outColor",
+			"Set": -1,
+			"Source": "out",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 1,
+			"Name": "reveal",
+			"Set": -1,
+			"Source": "out",
+			"Type": "float"
+		}
+	],
+	"GeomLayouts": null,
+	"GLSL": {
+		"Frag": "shaders/basic.frag",
+		"Geom": "",
+		"Tesc": "",
+		"Tese": "",
+		"Vert": "shaders/basic.vert"
+	},
+	"TescLayouts": null,
+	"TeseLayouts": null,
+	"VertLayouts": [
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 0,
+			"Name": "Position",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec3"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 1,
+			"Name": "Normal",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec3"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 2,
+			"Name": "Tangent",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 3,
+			"Name": "UV0",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec2"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 4,
+			"Name": "Color",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 5,
+			"Name": "JointIds",
+			"Set": -1,
+			"Source": "in",
+			"Type": "ivec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 6,
+			"Name": "JointWeights",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 7,
+			"Name": "MorphTarget",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec3"
+		},
+		{
+			"Binding": 0,
+			"Fields": [
+				{
+					"Name": "view",
+					"Type": "mat4"
+				},
+				{
+					"Name": "projection",
+					"Type": "mat4"
+				},
+				{
+					"Name": "uiView",
+					"Type": "mat4"
+				},
+				{
+					"Name": "uiProjection",
+					"Type": "mat4"
+				},
+				{
+					"Name": "cameraPosition",
+					"Type": "vec3"
+				},
+				{
+					"Name": "uiCameraPosition",
+					"Type": "vec3"
+				},
+				{
+					"Name": "screenSize",
+					"Type": "vec2"
+				},
+				{
+					"Name": "time",
+					"Type": "float"
+				}
+			],
+			"Location": -1,
+			"Name": "",
+			"Set": 0,
+			"Source": "uniform",
+			"Type": "UniformBufferObject"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 8,
+			"Name": "model",
+			"Set": -1,
+			"Source": "in",
+			"Type": "mat4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 12,
+			"Name": "color",
+			"Set": -1,
+			"Source": "in",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 0,
+			"Name": "fragColor",
+			"Set": -1,
+			"Source": "out",
+			"Type": "vec4"
+		},
+		{
+			"Binding": -1,
+			"Fields": null,
+			"Location": 1,
+			"Name": "fragTexCoords",
+			"Set": -1,
+			"Source": "out",
+			"Type": "vec2"
+		}
+	]
+}
