@@ -1,4 +1,8 @@
 {
+	"GLSL": {
+		"Vert": "shaders/basic.vert",
+		"Frag": "shaders/basic.frag"
+	},
 	"Vulkan": {
 		"Vert": "shaders/spv/basic.vert.spv",
 		"Frag": "shaders/spv/basic.frag.spv"
