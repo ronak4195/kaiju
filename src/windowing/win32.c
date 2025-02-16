@@ -54,8 +54,27 @@
 
 #include "win32.h"
 #include <string.h>
+#include <hidsdi.h>
 #include <windows.h>
 #include <windowsx.h>
+
+#include <hidusage.h>
+#include <hidpi.h>
+#pragma comment(lib, "hid.lib")
+
+// TOUCH DEFINES
+#define MAX_TOUCH_INPUTS	10
+
+// TRACKPAD (MULTITOUCH DIGITIZER) DEFINES
+// https://docs.microsoft.com/en-us/windows-hardware/design/component-guidelines/supporting-usages-in-multitouch-digitizer-drivers
+#define HID_DIGITIZER_PAGE							0x0D
+#define HID_USAGE_DIGITIZER_TOUCH_PAD				0x05
+#define HID_USAGE_DIGITIZER_CONFIDENCE				0x47
+#define HID_USAGE_DIGITIZER_WIDTH					0x48
+#define HID_USAGE_DIGITIZER_HEIGHT					0x49
+#define HID_USAGE_DIGITIZER_CONTACT_ID				0x51
+#define HID_USAGE_DIGITIZER_CONTACT_COUNT			0x54
+#define HID_USAGE_DIGITIZER_CONTACT_COUNT_MAXIMUM	0x55
 
 /*
 * Messages defined here are NOT to be sent to other windows
@@ -117,6 +136,17 @@ bool obtainControllerStates(SharedMem* sm) {
 LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
 	SharedMem* sm = (SharedMem*)GetWindowLongPtrA(hwnd, GWLP_USERDATA);
 	switch (uMsg) {
+		case WM_CREATE:
+		{
+			RegisterTouchWindow(hwnd, 0);
+			RAWINPUTDEVICE rid[1];
+            rid[0].usUsagePage = HID_DIGITIZER_PAGE;
+            rid[0].usUsage = HID_USAGE_DIGITIZER_TOUCH_PAD;
+            rid[0].dwFlags = RIDEV_INPUTSINK; // Receive even when not in foreground
+            rid[0].hwndTarget = hwnd;
+            RegisterRawInputDevices(rid, sizeof(rid)/sizeof(rid[0]), sizeof(rid[0]));
+			break;
+		}
 		case WM_DESTROY:
 			if (sm != NULL) {
 				shared_memory_set_write_state(sm, SHARED_MEM_QUIT);
@@ -158,6 +188,73 @@ LRESULT CALLBACK window_proc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 			break;
 	}
 	return DefWindowProc(hwnd, uMsg, wParam, lParam);
+}
+
+static inline bool is_trackpad_input(HRAWINPUT hRawInput) {
+	RAWINPUTHEADER header;
+    UINT headerSize = sizeof(RAWINPUTHEADER);
+    if (GetRawInputData(hRawInput, RID_HEADER, &header, &headerSize, sizeof(RAWINPUTHEADER)) != headerSize) {
+        return false;
+    }
+    HANDLE hDevice = header.hDevice;
+    RID_DEVICE_INFO deviceInfo;
+    UINT cbSize = sizeof(RID_DEVICE_INFO);
+    deviceInfo.cbSize = cbSize;
+    if (GetRawInputDeviceInfo(hDevice, RIDI_DEVICEINFO, &deviceInfo, &cbSize) > 0) {
+        if (deviceInfo.dwType == RIM_TYPEHID) {
+            if (deviceInfo.hid.usUsagePage == 0x0D && deviceInfo.hid.usUsage == 0x05) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+static inline void set_touchpad_event(InputEvent* evt, PRAWINPUT pRawInput) {
+	if (pRawInput->header.dwType == RIM_TYPEHID) {
+		RAWHID *pRawHid = &pRawInput->data.hid;
+		if (pRawHid->dwCount > 0) {
+			OutputDebugString(L"Trackpad Raw HID Input - Processing Reports:\n");
+			for (UINT iReport = 0; iReport < pRawHid->dwCount; ++iReport) {
+				BYTE *pReportData = &pRawHid->bRawData[iReport * pRawHid->dwSizeHid];
+				UINT reportSize = pRawHid->dwSizeHid;
+				// **HID Report Parsing (Based on ASSUMPTIONS):**
+				if (reportSize >= 2) { // Ensure minimum report size
+					int contactCount = pReportData[1]; // Byte 1: Contact Count
+					WCHAR buffer[512];
+					swprintf_s(buffer, 512, L"  Report %u: Contact Count = %d\n", iReport, contactCount);
+					OutputDebugString(buffer);
+
+					int dataOffset = 2; // Offset after Report ID (assumed byte 0) and Contact Count (byte 1)
+					for (int j = 0; j < contactCount; ++j) {
+						if (dataOffset + 5 <= reportSize) { // Ensure enough data for a contact
+							USHORT xPos = (USHORT)(pReportData[dataOffset] | (pReportData[dataOffset + 1] << 8)); // Bytes 2-3: X Position (little-endian)
+							USHORT yPos = (USHORT)(pReportData[dataOffset + 2] | (pReportData[dataOffset + 3] << 8)); // Bytes 4-5: Y Position (little-endian)
+							BYTE contactInfo = pReportData[dataOffset + 4]; // Byte 6: Contact ID/Flags
+							int contactId = contactInfo & 0x0F; // Example: Lower 4 bits as Contact ID
+							BOOL contactActive = (contactInfo & 0x80) != 0; // Example: Highest bit as Active Flag
+
+							swprintf_s(buffer, 512, L"    Contact %d: X=%u, Y=%u, ID=%d, Active=%s\n",
+									j + 1, xPos, yPos, contactId, contactActive ? L"TRUE" : L"FALSE");
+							OutputDebugString(buffer);
+
+							// TODO: Implement logic to track contact states (down, move, up)
+							// based on contactId and 'contactActive' flag over time and position changes
+
+							dataOffset += 5; // Move to next contact data (5 bytes per contact assumed)
+						} else {
+							OutputDebugString(L"    Incomplete contact data in report.\n");
+							break; // Stop processing contacts for this report if incomplete data
+						}
+					}
+				} else {
+					OutputDebugString(L"  Report too short to process.\n");
+				}
+			}
+		}
+	}
+	DefRawInputProc(&pRawInput, 1, sizeof(RAWINPUTHEADER));
+	free(rawData);
 }
 
 void process_message(SharedMem* sm, MSG *msg) {
@@ -210,6 +307,44 @@ void process_message(SharedMem* sm, MSG *msg) {
 			setMouseEvent(sm->evt, msg->lParam, MOUSE_WHEEL_HORIZONTAL);
 			sm->evt->mouse.wheelDelta = GET_WHEEL_DELTA_WPARAM(msg->wParam);
 			break;
+		case WM_TOUCH:
+		{
+			TOUCHINPUT pInputs[MAX_TOUCH_INPUTS];
+			UINT cInputs = LOWORD(msg->wParam);
+			cInputs = cInputs <= MAX_TOUCH_INPUTS ? cInputs : MAX_TOUCH_INPUTS;
+			HTOUCHINPUT ti = (HTOUCHINPUT)msg->lParam;
+			if (GetTouchInputInfo(ti, cInputs, pInputs, sizeof(pInputs[0]))) {
+				for (UINT i = 0; i < cInputs; i++) {
+					TOUCHINPUT ti = pInputs[i];
+					int id = ti.dwID;
+					int x = ti.x / 100;
+					int y = ti.y / 100;
+					// TODO:  Finish touch input once my touch device is charged
+					printf("Touch: ID=%d, x=%d, y=%d\n", id, x, y);
+				}
+				CloseTouchInputHandle((HTOUCHINPUT)msg->lParam);
+			}
+			free(pInputs);
+			break;
+		}
+		case WM_INPUT:
+		{
+			HRAWINPUT hRawInput = (HRAWINPUT)msg->lParam;
+			UINT dataSize = 0;
+			if (GetRawInputData(hRawInput, RID_INPUT, NULL, &dataSize, sizeof(RAWINPUTHEADER)) == -1) {
+				break;
+			}
+			LPBYTE rawData = (LPBYTE)malloc(dataSize);
+			if (rawData == NULL) {
+				break;
+			}
+			if (GetRawInputData(hRawInput, RID_INPUT, rawData, &dataSize, sizeof(RAWINPUTHEADER)) != dataSize) {
+				free(rawData);
+				break;
+			}
+			set_touchpad_event(sm->evt, (PRAWINPUT)rawData)
+			break;
+		}
 		case WM_KEYDOWN:
 		case WM_SYSKEYDOWN:
 		case WM_KEYUP:
