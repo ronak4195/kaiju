@@ -211,50 +211,16 @@ static inline bool is_trackpad_input(HRAWINPUT hRawInput) {
 }
 
 static inline void set_touchpad_event(InputEvent* evt, PRAWINPUT pRawInput) {
+	// Checkout this git repository for an example: https://github.com/ichisadashioko/windows-touchpad/blob/master/touchpad/main.c
 	if (pRawInput->header.dwType == RIM_TYPEHID) {
 		RAWHID *pRawHid = &pRawInput->data.hid;
 		if (pRawHid->dwCount > 0) {
-			OutputDebugString(L"Trackpad Raw HID Input - Processing Reports:\n");
-			for (UINT iReport = 0; iReport < pRawHid->dwCount; ++iReport) {
-				BYTE *pReportData = &pRawHid->bRawData[iReport * pRawHid->dwSizeHid];
-				UINT reportSize = pRawHid->dwSizeHid;
-				// **HID Report Parsing (Based on ASSUMPTIONS):**
-				if (reportSize >= 2) { // Ensure minimum report size
-					int contactCount = pReportData[1]; // Byte 1: Contact Count
-					WCHAR buffer[512];
-					swprintf_s(buffer, 512, L"  Report %u: Contact Count = %d\n", iReport, contactCount);
-					OutputDebugString(buffer);
-
-					int dataOffset = 2; // Offset after Report ID (assumed byte 0) and Contact Count (byte 1)
-					for (int j = 0; j < contactCount; ++j) {
-						if (dataOffset + 5 <= reportSize) { // Ensure enough data for a contact
-							USHORT xPos = (USHORT)(pReportData[dataOffset] | (pReportData[dataOffset + 1] << 8)); // Bytes 2-3: X Position (little-endian)
-							USHORT yPos = (USHORT)(pReportData[dataOffset + 2] | (pReportData[dataOffset + 3] << 8)); // Bytes 4-5: Y Position (little-endian)
-							BYTE contactInfo = pReportData[dataOffset + 4]; // Byte 6: Contact ID/Flags
-							int contactId = contactInfo & 0x0F; // Example: Lower 4 bits as Contact ID
-							BOOL contactActive = (contactInfo & 0x80) != 0; // Example: Highest bit as Active Flag
-
-							swprintf_s(buffer, 512, L"    Contact %d: X=%u, Y=%u, ID=%d, Active=%s\n",
-									j + 1, xPos, yPos, contactId, contactActive ? L"TRUE" : L"FALSE");
-							OutputDebugString(buffer);
-
-							// TODO: Implement logic to track contact states (down, move, up)
-							// based on contactId and 'contactActive' flag over time and position changes
-
-							dataOffset += 5; // Move to next contact data (5 bytes per contact assumed)
-						} else {
-							OutputDebugString(L"    Incomplete contact data in report.\n");
-							break; // Stop processing contacts for this report if incomplete data
-						}
-					}
-				} else {
-					OutputDebugString(L"  Report too short to process.\n");
-				}
+			for (UINT i = 0; i < pRawHid->dwCount; i++) {
+				//BYTE *pReportData = &pRawHid->bRawData[i * pRawHid->dwSizeHid];
+				//UINT reportSize = pRawHid->dwSizeHid;
 			}
 		}
 	}
-	DefRawInputProc(&pRawInput, 1, sizeof(RAWINPUTHEADER));
-	free(rawData);
 }
 
 void process_message(SharedMem* sm, MSG *msg) {
@@ -342,7 +308,10 @@ void process_message(SharedMem* sm, MSG *msg) {
 				free(rawData);
 				break;
 			}
-			set_touchpad_event(sm->evt, (PRAWINPUT)rawData)
+			PRAWINPUT pRawInput = (PRAWINPUT)rawData;
+			set_touchpad_event(sm->evt, pRawInput);
+			DefRawInputProc(&pRawInput, 1, sizeof(RAWINPUTHEADER));
+			free(rawData);
 			break;
 		}
 		case WM_KEYDOWN:
