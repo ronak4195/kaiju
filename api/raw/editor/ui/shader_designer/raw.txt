@@ -1,0 +1,14 @@
+package shader_designer // import "."
+
+
+FUNCTIONS
+
+func New()
+func OpenPipeline(path string)
+
+TYPES
+
+type ShaderDesigner struct {
+	// Has unexported fields.
+}
+
